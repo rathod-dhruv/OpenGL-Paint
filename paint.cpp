@@ -28,6 +28,22 @@ void drawLineRealTime() {
     glEnd();
 }
 
+void drawLine(std::vector<std::pair<float, float>> linePoints, const float* colorArray, float lineWidth)
+{
+    glColor3f(colorArray[0], colorArray[1], colorArray[2]);
+    glLineWidth(lineWidth);
+
+    glBegin(GL_LINE_STRIP);
+
+    for (const auto& point : linePoints)
+    {
+        glVertex2f(point.first, point.second);
+    }
+
+    glEnd();
+}
+
+
 void handleMouseClick(int button, int state, int x, int y)
 {
     //x and y are in openGL coordinates
@@ -57,7 +73,17 @@ void handleMouseClick(int button, int state, int x, int y)
             if (pencilTool)
             {
                 isDrawing = false;
+                std::vector<std::pair<float, float>> tempPoints = points; // Capture current points
+                float tempColorArray[3] = { currColorArray[0], currColorArray[1], currColorArray[2] }; // Capture current color
+                float tempLineWidth = currLineWidth; // Capture current line width  
+
+                drawFunctions.push_back([tempPoints, tempColorArray, tempLineWidth]() {
+                    float colorArr[3] = { tempColorArray[0], tempColorArray[1], tempColorArray[2] };
+                    drawLine(tempPoints, colorArr, tempLineWidth);
+                    });
+
                 points.clear();
+
             }
 
             glutPostRedisplay(); // Request a redraw
@@ -109,8 +135,13 @@ void display()
 
     // glEnd();
 
+    for (const auto& func : drawFunctions)
+    {
+        func(); // Call each stored drawing function
+    }
 
     drawLineRealTime();
+
     glutSwapBuffers();
 
 }
