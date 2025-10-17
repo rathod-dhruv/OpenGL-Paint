@@ -4,6 +4,9 @@
 #include <iostream>
 #include <vector>
 #include <functional>
+#include <stack>
+#include <algorithm>
+
 
 bool isDrawing, isErasing, isLineDrawing = false;
 bool pencilTool, eraserTool, lineTool, rectangleTool, paintTool = false;
@@ -15,10 +18,66 @@ std::vector<std::function<void()>> drawFunctions;
 std::vector<std::pair<float, float>> eraserCurves;
 std::vector<std::pair<float, float>> lineCurves(2);
 std::vector<std::pair<float, float>> lineCurves1(2);
+std::vector<std::pair<float, float>> paintedPoints;
 
 GLfloat currColorArray[3] = { 0.0f, 0.0f, 0.0f }; // Default color is black
 GLfloat currLineWidth = 2.0f; // Default line width
 
+GLubyte targetColor[3];
+
+void floodFillStack(int x, int y, GLfloat fillColor[3], GLubyte targetColor[3])
+{
+    std::stack<std::pair<int, int>> pointsToProcess;
+    pointsToProcess.push({ x, y });
+
+
+    bool visited[glutGet(GLUT_WINDOW_WIDTH)][glutGet(GLUT_WINDOW_HEIGHT)];
+    std::fill(&visited[0][0], &visited[0][0] + sizeof(visited), false);
+
+    while (!pointsToProcess.empty())
+    {
+        std::pair<int, int> current = pointsToProcess.top();
+        pointsToProcess.pop();
+
+        x = current.first;
+        y = current.second;
+
+        if (x < 0 || x >= glutGet(GLUT_WINDOW_WIDTH) || y < 0 || y >= glutGet(GLUT_WINDOW_HEIGHT) || visited[x][y])
+        {
+            continue;
+        }
+        else
+        {
+            visited[x][y] = true;
+
+            GLubyte pixelColor[3];
+            //Because OpenGL's origin is at the bottom-left corner 
+            //and windowing systems usually have the origin at the top - left corner
+            glReadPixels(x, glutGet(GLUT_WINDOW_HEIGHT) - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixelColor);
+
+            if (pixelColor[0] == targetColor[0] &&
+                pixelColor[1] == targetColor[1] &&
+                pixelColor[2] == targetColor[2])
+            {
+                //This formula converts window coordinates to normalized device coordinates
+                float jPosX = (2.0f * static_cast<float>(x) / glutGet(GLUT_WINDOW_WIDTH)) - 1.0f;
+                float jPosY = 1.0f - (2.0f * static_cast<float>(y) / glutGet(GLUT_WINDOW_HEIGHT));
+                paintedPoints.emplace_back(std::make_pair(jPosX, jPosY));
+
+
+                glFlush();
+
+                // Push neighboring points onto the stack for processing
+                pointsToProcess.push({ x + 1, y });
+                pointsToProcess.push({ x - 1, y });
+                pointsToProcess.push({ x, y + 1 });
+                pointsToProcess.push({ x, y - 1 });
+
+            }
+
+        }
+    }
+}
 void drawLineRealTime() {
     glColor3f(currColorArray[0], currColorArray[1], currColorArray[2]);
     glLineWidth(currLineWidth);
@@ -77,10 +136,10 @@ void drawStraightLineRealtime()
 }
 
 
-void DrawStraightLine(std::vector<std::pair<float, float>> linePoints, const float* colorArray, float lineWidth)
+void drawStraightLine(std::vector<std::pair<float, float>> linePoints, const float* colorArray)
 {
     glColor3f(colorArray[0], colorArray[1], colorArray[2]);
-    glLineWidth(lineWidth);
+    glLineWidth(currLineWidth);
 
     glBegin(GL_LINES);
 
@@ -212,7 +271,25 @@ void handleMouseClick(int button, int state, int x, int y)
                 lineCurves.clear();
                 lineCurves.resize(2);
                 lineCurves[0] = std::make_pair(posX, posY);
+                lineCurves[1] = std::make_pair(posX, posY);
                 isLineDrawing = true;
+            }
+
+            if (paintTool)
+            {
+                glReadPixels(x, glutGet(GLUT_WINDOW_HEIGHT) - y, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, targetColor);
+                floodFillStack(x, y, currColorArray, targetColor);
+
+                //code for function of vectors
+                std::vector<std::pair<float, float>> tempPaintingPoints = paintedPoints; // Capture current points
+                float tempColorArray[3] = { currColorArray[0], currColorArray[1], currColorArray[2] }; // Capture current color
+
+                drawFunctions.push_back([tempPaintingPoints, tempColorArray]() {
+                    float colorArrCopy[3] = { tempColorArray[0], tempColorArray[1], tempColorArray[2] };
+                    drawLine(tempPaintingPoints, colorArrCopy, currLineWidth);
+                    });
+
+                paintedPoints.clear();
             }
 
         }
@@ -252,13 +329,12 @@ void handleMouseClick(int button, int state, int x, int y)
                 isLineDrawing = false;
                 std::vector<std::pair<float, float>> tempLinePoints = lineCurves;
                 float tempColorArray[3] = { currColorArray[0], currColorArray[1], currColorArray[2] }; // Capture current color
-                float tempLineWidth = currLineWidth; // Capture current line width
 
-                drawFunctions.push_back([tempLinePoints, tempColorArray, tempLineWidth]() {
+                drawFunctions.push_back([tempLinePoints, tempColorArray]() {
                     float colorArr[3] = { tempColorArray[0], tempColorArray[1], tempColorArray[2] };
-                    drawLine(tempLinePoints, colorArr, tempLineWidth);
+                    drawStraightLine(tempLinePoints, colorArr);
                     });
-
+                lineCurves = lineCurves1;
             }
 
             glutPostRedisplay(); // Request a redraw
