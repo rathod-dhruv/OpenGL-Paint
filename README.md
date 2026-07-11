@@ -18,12 +18,11 @@ A MS Paint-style 2D drawing application built with C++ and OpenGL featuring esse
 
 ## Screenshots
 
-| Screenshot 1 | Screenshot 2 | Screenshot 3 |
-|---|---|---|
-| [<img width="982" height="932" alt="1" src="https://github.com/user-attachments/assets/91702ce6-3f0f-4c00-8df3-5ca5b14e5860" />]
- | [<img width="1094" height="819" alt="2" src="https://github.com/user-attachments/assets/0873cf82-6c9c-49d8-a72e-1f3223a3e282" />]
-| [<img width="1350" height="807" alt="3" src="https://github.com/user-attachments/assets/19753e1d-ec9b-42e6-9d38-6a5bc8b4f426" />]
- |
+<div align="center">
+  <img width="300" alt="Drawing Interface" src="https://github.com/user-attachments/assets/91702ce6-3f0f-4c00-8df3-5ca5b14e5860" />
+  <img width="300" alt="Paint Tool Demo" src="https://github.com/user-attachments/assets/0873cf82-6c9c-49d8-a72e-1f3223a3e282" />
+  <img width="300" alt="Completed Artwork" src="https://github.com/user-attachments/assets/19753e1d-ec9b-42e6-9d38-6a5bc8b4f426" />
+</div>
 
 ## Technology Stack
 
